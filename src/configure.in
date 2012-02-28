@@ -1,0 +1,72 @@
+dnl Process this file with autoconf to produce a configure script.
+AC_INIT(Template.cc)
+AC_CONFIG_HEADER(config.h)
+
+dnl Qrux's stuff
+AC_PREFIX_DEFAULT(/usr/local)
+AC_PREFIX_PROGRAM(Xwing)
+
+AC_SUBST(x_includes)
+AC_SUBST(x_libraries)
+
+AC_SUBST(boehm_gc_dir)
+AC_SUBST(html_dir)
+AC_SUBST(gxx_sysinc_dir)
+AC_SUBST(gxx_include_dir)
+
+AC_ARG_WITH(boehm-gc-dir,
+[  --with-boehm-gc-dir=DIR Boehm GC libaries and includes are in DIR],
+boehm_gc_dir=$withval)
+
+
+dnl Checks for programs.
+AC_PROG_CC
+AC_PROG_CXX
+AC_PROG_INSTALL
+
+AC_LANG_C
+AC_LANG_CPLUSPLUS
+
+AC_PATH_X
+AC_PATH_XTRA
+
+
+dnl Checks for libraries.
+dnl Replace `main' with a function in -lX11:
+dnl AC_CHECK_LIB(X11, XOpenDisplay)
+dnl Replace `main' with a function in -lawt:
+dnl FIXME!! AC_CHECK_LIB(awt, ??)
+
+dnl
+dnl testing for presence of GC lib
+dnl
+
+AC_LANG_C
+
+if test x"$boehm_gc_dir" != x; then
+        gc_cppflags="-I$boehm_gc_dir/include"
+        gc_ldflags="-L$boehm_gc_dir/lib"
+fi
+AC_CHECK_LIB(gc, GC_enable_incremental,
+        [       AC_DEFINE(HAVE_LIBGC)
+                CPPFLAGS="$CPPFLAGS $gc_cppflags"
+                LDFLAGS="$LDFLAGS $gc_ldflags"
+		LIBS="$LIBS -lgc"
+        ],
+        AC_MSG_WARN([libgc cannot be found]),
+        $gc_ldflags)
+
+
+
+dnl Checks for header files.
+
+
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+
+
+
+dnl Checks for library functions.
+
+AC_OUTPUT(base/Makefile awt/Makefile xwing/Makefile all.mk Makefile)

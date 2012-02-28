@@ -1,0 +1,129 @@
+boehm_gc_dir=			@boehm_gc_dir@
+base_dir=			@base_dir@
+html_dir=			@html_dir@
+gxx_sysinc_dir=			@gxx_sysinc_dir@
+gxx_include_dir=		@gxx_include_dir@
+version=			$(shell cat version)
+x_includes=			@x_includes@
+x_libraries=			@x_libraries@
+X_LIBS=				@X_LIBS@
+X_CFLAGS=			@X_CFLAGS@
+
+
+MANIFEST=			../MANIFEST
+
+
+.PHONY:				all
+all:
+	$(MAKE) -C base all
+	$(MAKE) -C awt all
+	$(MAKE) -C xwing all
+	@echo ; echo "  Xwing -- 'all' done." ; echo
+
+
+.PHONY:				distclean
+distclean:
+	$(MAKE) -C base $@
+	$(MAKE) -C awt $@
+	$(MAKE) -C xwing $@
+	/bin/rm -f all.mk Makefile config.h config.status config.cache config.log
+	@echo ; echo "  Xwing -- 'distclean' done." ; echo
+	/bin/rm -f $(MANIFEST) ../Xwing-*.tar.gz
+
+
+.DEFAULT:
+	$(MAKE) -C base $@
+	$(MAKE) -C awt $@
+	$(MAKE) -C xwing $@
+	@echo ; echo "  Xwing -- '$@' done." ; echo
+
+
+.PHONY:				demo
+demo:				install
+	$(MAKE) -C xwing testers
+
+.PHONY:				lines
+lines:
+	wc -l `find base awt xwing -name "*.hh" -o -name "*.cc"`
+
+#
+# manifest
+#
+
+.PHONY:				manifest
+manifest:
+	$(MAKE) -C base $(MANIFEST)
+	$(MAKE) -C awt $(MANIFEST)
+	$(MAKE) -C xwing $(MANIFEST)
+	@echo "  Creating MANIFEST..."
+	@/bin/rm -f $(MANIFEST) ; touch $(MANIFEST)
+	@echo "    Creating MANIFESTs in subdirs..."
+	@echo "    Putting default files in MANIFEST..."
+	@find . -name "*.cc" >> $(MANIFEST)
+	@find . -name "*.hh" >> $(MANIFEST)
+	@find . -name "defs" >> $(MANIFEST)
+	@find . -name "except" >> $(MANIFEST)
+	@find . -name "inc" >> $(MANIFEST)
+	@find . -name "*.in" >> $(MANIFEST)
+	@for list in `find . -name "MANIFEST"` ; do \
+		dirname=`dirname $$list` ; \
+		echo "      Processing MANIFEST in ($$dirname)..." ; \
+		for file in `cat $$list` ; do \
+			echo "$$dirname/$$file" >> $(MANIFEST); \
+		done ; \
+	done
+	@echo ; echo "  Xwing -- 'manifest' done." ; echo
+
+#
+# package
+#
+
+.PHONY:				package
+package:			manifest
+	/bin/rm -rf ../$(version)
+	mkdir ../$(version)
+	cat $(MANIFEST) | cpio -pdm ../$(version)
+	/bin/rm -f $(MANIFEST)
+	cd .. ; tar zcf $(version).tar.gz $(version)
+	/bin/rm -rf ../$(version)
+	/bin/mv -f ../$(version).tar.gz $(html_dir)
+	@echo ; echo "  Xwing -- 'package' done." ; echo
+
+
+#
+# autoconf boilerplate targets
+#
+
+$(srcdir)/configure:		configure.in aclocal.m4
+	cd $(srcdir) && autoconf
+
+$(srcdir)/config.h.in:		stamp-h.in
+$(srcdir)/stamp-h.in:		configure.in aclocal.m4
+	cd $(srcdir) && autoheader
+	echo timestamp > $(srcdir)/stamp-h.in
+
+config.h:			stamp-h
+stamp-h:			config.h.in config.status
+	./config.status
+Makefile:			Makefile.in config.status
+	./config.status
+config.status:			configure
+	./config.status --recheck
+
+#
+# test the configuration by echoing vars
+#
+
+testconf:
+	@echo
+	@echo "  base_dir        : $(base_dir)"
+	@echo "  boehm_gc_dir    : $(boehm_gc_dir)"
+	@echo "  html_dir        : $(html_dir)"
+	@echo "  gxx_sysinc_dir  : $(gxx_sysinc_dir)"
+	@echo "  gxx_include_dir : $(gxx_include_dir)"
+	@echo "  version         : $(version)"
+	@echo "  x_includes      : $(x_includes)"
+	@echo "  x_libraries     : $(x_libraries)"
+	@echo "  X_LIBS          : $(X_LIBS)"
+	@echo "  X_CFLAGS        : $(X_CFLAGS)"
+	@echo

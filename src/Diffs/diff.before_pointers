@@ -1,0 +1,1202 @@
+cvs diff: Diffing .
+cvs diff: Diffing awt
+Index: awt/ActionEvent.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/ActionEvent.cc,v
+retrieving revision 1.2
+diff -r1.2 ActionEvent.cc
+14c14
+< #include <awt/Event.hh>
+---
+> #include <awt/AWTEvent.hh>
+20,21c20,21
+< ActionEvent::ActionEvent ( Object& s, int i, String& cmd ) :
+< 		Event(s,i), command(cmd) {
+---
+> ActionEvent::ActionEvent ( Object* s, int i, String* cmd ) :
+> 		AWTEvent(s,i), command(cmd) {
+Index: awt/ActionEvent.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/ActionEvent.hh,v
+retrieving revision 1.2
+diff -r1.2 ActionEvent.hh
+13c13
+< class ActionEvent : public Event {
+---
+> class ActionEvent : public AWTEvent {
+15c15
+< 	String& command;
+---
+> 	String* command;
+19c19
+< 	public: ActionEvent ( Object&, int, String& );
+---
+> 	public: ActionEvent ( Object*, int, String* );
+Index: awt/ActionListener.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/ActionListener.cc,v
+retrieving revision 1.2
+diff -r1.2 ActionListener.cc
+14c14
+< #include <awt/Event.hh>
+---
+> #include <awt/AWTEvent.hh>
+Index: awt/Color.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Color.cc,v
+retrieving revision 1.3
+diff -r1.3 Color.cc
+15,18c15,18
+< const Color Color::black(0,0,0);
+< const Color Color::gray(204,204,204);
+< const Color Color::white(255,255,255);
+< const Color Color::lavender(102,102,153);
+---
+> const Color* Color::black = new Color(0,0,0);
+> const Color* Color::gray = new Color(204,204,204);
+> const Color* Color::white = new Color(255,255,255);
+> const Color* Color::lavender = new Color(102,102,153);
+Index: awt/Color.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Color.hh,v
+retrieving revision 1.3
+diff -r1.3 Color.hh
+20,23c20,23
+< 	public: static const Color black;
+< 	public: static const Color gray;
+< 	public: static const Color white;
+< 	public: static const Color lavender;
+---
+> 	public: static const Color* black;
+> 	public: static const Color* gray;
+> 	public: static const Color* white;
+> 	public: static const Color* lavender;
+Index: awt/Component.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Component.cc,v
+retrieving revision 1.3
+diff -r1.3 Component.cc
+26c26
+< 	foreground(Color::black), background(Color::gray) {
+---
+> 	foreground(Color::black->clone()), background(Color::gray->clone()) {
+29c29
+< Dimension
+---
+> Dimension*
+31c31
+< 	return Dimension(that.width, that.height);
+---
+> 	return new Dimension(that.width, that.height);
+34c34
+< Rectangle
+---
+> Rectangle*
+36c36
+< 	return Rectangle(that.x, that.y, that.width, that.height);
+---
+> 	return new Rectangle(that.x, that.y, that.width, that.height);
+39c39
+< Component&
+---
+> Component*
+41c41
+< 	return *(that.parent);
+---
+> 	return that.parent;
+44c44
+< Graphics&
+---
+> Graphics*
+46c46
+< 	return (*(that.parent)).getGraphics();
+---
+> 	return that.parent->getGraphics();
+49c49
+< Color
+---
+> Color*
+51c51
+< 	return that.foreground;
+---
+> 	return that.foreground->clone();
+54c54
+< Color
+---
+> Color*
+56c56,64
+< 	return that.background;
+---
+> 	return that.background->clone();
+> 	}
+> 
+> Component*
+> Component::getComponentAt ( int x, int y ) {
+> 	if ( that.getBounds()->contains(x,y) )
+> 		return this;
+> 
+> 	return 0;
+60c68
+< Component::setForeground ( const Color& c ) {
+---
+> Component::setForeground ( Color* c ) {
+65c73
+< Component::setBackground ( const Color& c ) {
+---
+> Component::setBackground ( Color* c ) {
+70,72c78,79
+< Component::setSize ( const Dimension& d ) {
+< 	that.width = d.width;
+< 	that.height = d.height;
+---
+> Component::setSize ( Dimension* d ) {
+> 	that.setSize(d->width, d->height);
+77c84,85
+< 	that.setSize(Dimension(w,h));
+---
+> 	that.width = w;
+> 	that.height = h;
+87c95
+< Component::paintAll ( Graphics& g ) {
+---
+> Component::paintAll ( Graphics* g ) {
+92c100
+< Component::update ( Graphics& g ) {
+---
+> Component::update ( Graphics* g ) {
+97,100c105,108
+< 	Color save = g.getColor();
+< 	g.setColor(that.background);
+< 	g.fillRect(0, 0, that.width, that.height);
+< 	g.setColor(save);
+---
+> 	Color* save = g->getColor();
+> 	g->setColor(that.background);
+> 	g->fillRect(0, 0, that.width, that.height);
+> 	g->setColor(save);
+117,121d124
+< 
+< void
+< Component::output ( TabStream& lhs ) const {
+< 	lhs << (void*)this;
+<  	}
+Index: awt/Component.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Component.hh,v
+retrieving revision 1.3
+diff -r1.3 Component.hh
+28,29c28,29
+< 	private: Color foreground;
+< 	private: Color background;
+---
+> 	private: Color* foreground;
+> 	private: Color* background;
+34,42c34,43
+< 	public: virtual Dimension getSize();
+< 	public: virtual Rectangle getBounds();
+< 	public: virtual Component& getParent();
+< 	public: virtual Graphics& getGraphics();
+< 	public: virtual Color getForeground() const;
+< 	public: virtual Color getBackground() const;
+< 	public: virtual void setForeground ( const Color& );
+< 	public: virtual void setBackground ( const Color& );
+< 	public: virtual void setSize ( const Dimension& );
+---
+> 	public: virtual Dimension* getSize();
+> 	public: virtual Rectangle* getBounds();
+> 	public: virtual Component* getParent();
+> 	public: virtual Graphics* getGraphics();
+> 	public: virtual Color* getForeground() const;
+> 	public: virtual Color* getBackground() const;
+> 	public: virtual Component* getComponentAt ( int, int );
+> 	public: virtual void setForeground ( Color* );
+> 	public: virtual void setBackground ( Color* );
+> 	public: virtual void setSize ( Dimension* );
+45,47c46,48
+< 	public: virtual void paint ( Graphics& ) = 0;
+< 	public: virtual void paintAll ( Graphics& );
+< 	public: virtual void update ( Graphics& );
+---
+> 	public: virtual void paint ( Graphics* ) = 0;
+> 	public: virtual void paintAll ( Graphics* );
+> 	public: virtual void update ( Graphics* );
+57d57
+< 	public: virtual void output ( TabStream& ) const;
+Index: awt/Container.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Container.cc,v
+retrieving revision 1.3
+diff -r1.3 Container.cc
+9a10,11
+> #include <stl.h>
+> 
+30,32c32,34
+< Component&
+< awt::Container::add ( Component& c ) {
+< 	int i = that.list.size();
+---
+> Component*
+> awt::Container::add ( Component* c ) {
+> 	c->parent = this;
+35c37
+< 	that.lm->layoutContainer(that);
+---
+> 	that.lm->layoutContainer(this);
+37,39c39
+< 	Component& cc = DC<Component&>(that.list.get(i));
+< 	cc.parent = this;
+< 	return cc;
+---
+> 	return c;
+42c42
+< Component&
+---
+> Component*
+44c44,59
+< 	return DC<Component&>(that.list.get(i));
+---
+> 	return that.list.get(i);
+> 	}
+> 
+> Component*
+> awt::Container::getComponentAt ( int x, int y ) {
+> 	Component* c;
+> 	Component* target = that.Component::getComponentAt(x,y);
+> 	unsigned int count = list.size();
+> 
+> 	for ( int i = 0; i < count; ++i ) {
+> 		c = list.get(i)->getComponentAt(x,y);
+> 		if ( c ) {
+> 			target = c;
+> 			} }
+> 
+> 	return target;
+52c67
+< Graphics&
+---
+> Graphics*
+54c69
+< 	return (*(that.parent)).getGraphics();
+---
+> 	return that.getParent()->getGraphics();
+57c72
+< LayoutManager&
+---
+> LayoutManager*
+59c74
+< 	return *(that.lm);
+---
+> 	return that.lm;
+63,65c78,79
+< awt::Container::setLayout( const LayoutManager& lm ) {
+< 	delete that.lm;
+< 	that.lm = DC<LayoutManager*>(lm.clone());
+---
+> awt::Container::setLayout( LayoutManager* lm ) {
+> 	that.lm = lm;
+69,70c83,84
+< awt::Container::paintAll ( Graphics& g ) {
+< 	that.lm->layoutContainer(that);
+---
+> awt::Container::paintAll ( Graphics* g ) {
+> 	that.lm->layoutContainer(this);
+72c86
+< 	Dimension size = that.getSize();
+---
+> 	Dimension* size = that.getSize();
+76,77c90,91
+< 		Component& c = that.getComponent(i);
+< 		Rectangle bounds = c.getBounds();
+---
+> 		Component* c = that.getComponent(i);
+> 		Rectangle* bounds = c->getBounds();
+79,80c93,94
+< 		g.translate(bounds.x, bounds.y);
+< 		g.setClip(bounds.x, bounds.y, bounds.width, bounds.height);
+---
+> 		g->translate(bounds->x, bounds->y);
+> 		g->setClip(bounds->x, bounds->y, bounds->width, bounds->height);
+82c96
+< 		c.paint(g);
+---
+> 		c->paint(g);
+84,85c98,99
+< 		g.setClip(-bounds.x, -bounds.y, size.width, size.height);
+< 		g.translate(-bounds.x, -bounds.y);
+---
+> 		g->setClip(-bounds->x, -bounds->y, size->width, size->height);
+> 		g->translate(-bounds->x, -bounds->y);
+90c104
+< awt::Container::paintComponents ( Graphics& g ) {
+---
+> awt::Container::paintComponents ( Graphics* g ) {
+95c109
+< awt::Container::update ( Graphics& g ) {
+---
+> awt::Container::update ( Graphics* g ) {
+106c120
+< 	that.lm->layoutContainer(that);
+---
+> 	that.lm->layoutContainer(this);
+108c122
+< 	Dimension size = that.getSize();
+---
+> 	Dimension* size = that.getSize();
+112,113c126,127
+< 		Component& c = that.getComponent(i);
+< 		Rectangle bounds = c.getBounds();
+---
+> 		Component* c = that.getComponent(i);
+> 		Rectangle* bounds = c->getBounds();
+115,116c129,130
+< 		g.translate(bounds.x, bounds.y);
+< 		g.setClip(bounds.x, bounds.y, bounds.width, bounds.height);
+---
+> 		g->translate(bounds->x, bounds->y);
+> 		g->setClip(bounds->x, bounds->y, bounds->width, bounds->height);
+118c132
+< 		c.update(g);
+---
+> 		c->update(g);
+120,121c134,135
+< 		g.setClip(-bounds.x, -bounds.y, size.width, size.height);
+< 		g.translate(-bounds.x, -bounds.y);
+---
+> 		g->setClip(-bounds->x, -bounds->y, size->width, size->height);
+> 		g->translate(-bounds->x, -bounds->y);
+Index: awt/Container.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Container.hh,v
+retrieving revision 1.3
+diff -r1.3 Container.hh
+17c17
+< 	private: List list;
+---
+> 	private: Vector<Component*> list;
+23,24c23,25
+< 	public: virtual Component& add ( Component& );
+< 	public: virtual Component& getComponent ( unsigned int );
+---
+> 	public: virtual Component* add ( Component* );
+> 	public: virtual Component* getComponent ( unsigned int );
+> 	public: virtual Component* getComponentAt ( int, int );
+26,32c27,33
+< 	public: virtual Graphics& getGraphics();
+< 	public: virtual LayoutManager& getLayout();
+< 	public: virtual void setLayout ( const LayoutManager& );
+< 	public: virtual void paint ( Graphics& ) = 0;
+< 	public: virtual void paintAll ( Graphics& );
+< 	public: virtual void paintComponents ( Graphics& );
+< 	public: virtual void update ( Graphics& );
+---
+> 	public: virtual Graphics* getGraphics();
+> 	public: virtual LayoutManager* getLayout();
+> 	public: virtual void setLayout ( LayoutManager* );
+> 	public: virtual void paint ( Graphics* ) = 0;
+> 	public: virtual void paintAll ( Graphics* );
+> 	public: virtual void paintComponents ( Graphics* );
+> 	public: virtual void update ( Graphics* );
+Index: awt/Dimension.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Dimension.cc,v
+retrieving revision 1.2
+diff -r1.2 Dimension.cc
+25,26c25,30
+< Dimension::equals ( Object& o ) {
+< 	return that == o;
+---
+> Dimension::equals ( Object* o ) {
+> 	Dimension* d = DC<Dimension*>(o);
+> 	if ( d != 0 )
+> 		return (that.width == d->width) || (that.height == d->height);
+> 
+> 	return false;
+39c43
+< Dimension
+---
+> Dimension*
+41c45
+< 	return that;
+---
+> 	return this;
+45,46c49,51
+< Dimension::setSize ( Dimension& d ) {
+< 	that = d;
+---
+> Dimension::setSize ( Dimension* d ) {
+> 	that.width = d->width;
+> 	that.height = d->height;
+Index: awt/Dimension.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Dimension.hh,v
+retrieving revision 1.2
+diff -r1.2 Dimension.hh
+22c22
+< 	public: virtual bool equals ( Object& );
+---
+> 	public: virtual bool equals ( Object* );
+25,26c25,26
+< 	public: virtual Dimension getSize();
+< 	public: virtual void setSize ( Dimension& );
+---
+> 	public: virtual Dimension* getSize();
+> 	public: virtual void setSize ( Dimension* );
+Index: awt/EventObject.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/EventObject.cc,v
+retrieving revision 1.2
+diff -r1.2 EventObject.cc
+18c18
+< EventObject::EventObject ( Object& s ) : source(s) {
+---
+> EventObject::EventObject ( Object* s ) : source(s) {
+21c21
+< Object&
+---
+> Object*
+48c48
+< // Date:	??
+---
+> // Date:	28 July 1999
+Index: awt/EventObject.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/EventObject.hh,v
+retrieving revision 1.2
+diff -r1.2 EventObject.hh
+15c15
+< 	protected: Object& source;
+---
+> 	protected: Object* source;
+19,20c19,20
+< 	public: EventObject ( Object& );
+< 	public: virtual Object& getSource();
+---
+> 	public: EventObject ( Object* );
+> 	public: virtual Object* getSource();
+40c40
+< // Date:	??
+---
+> // Date:	28 July 1999
+Index: awt/Font.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Font.cc,v
+retrieving revision 1.4
+diff -r1.4 Font.cc
+18c18
+< awt::Font::Font ( const String& n, int sty, unsigned int sz ) :
+---
+> awt::Font::Font ( String* n, int sty, unsigned int sz ) :
+22c22,26
+< String
+---
+> awt::Font::Font ( const String& n, int sty, unsigned int sz ) :
+> 		font_name(n.clone()), style(sty), size(sz) {
+> 	}
+> 
+> String*
+47,48c51,52
+< awt::Font::equals ( const Object& rhs ) const {
+< 	const awt::Font& obj = DC<const awt::Font&>(rhs);
+---
+> awt::Font::equals ( Object* rhs ) const {
+> 	const awt::Font* obj = DC<const awt::Font*>(rhs);
+51,53c55,57
+< 		(that.font_name == obj.font_name) ||
+< 		(that.style == obj.style) ||
+< 		(that.size == obj.size);
+---
+> 		(that.font_name == obj->font_name) ||
+> 		(that.style == obj->style) ||
+> 		(that.size == obj->size);
+Index: awt/Font.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Font.hh,v
+retrieving revision 1.3
+diff -r1.3 Font.hh
+16c16
+< 	private: String font_name;
+---
+> 	private: String* font_name;
+21a22
+> 	public: Font ( String*, int, unsigned int );
+23c24
+< 	public: virtual String getFontName() const;
+---
+> 	public: virtual String* getFontName() const;
+34c35
+< 	public: virtual bool equals ( const Object& ) const;
+---
+> 	public: virtual bool equals ( Object* ) const;
+Index: awt/FontMetrics.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/FontMetrics.cc,v
+retrieving revision 1.1
+diff -r1.1 FontMetrics.cc
+19,20c19,20
+< FontMetrics::FontMetrics ( const awt::Font& f ) :
+< 		font_info(XLoadQueryFont(glob::display, f.getFontName().c_str())) {
+---
+> FontMetrics::FontMetrics ( awt::Font* f ) :
+> 		font_info(XLoadQueryFont(glob::display, f->getFontName()->c_str())) {
+35,36c35,36
+< FontMetrics::stringWidth ( const String& string ) const {
+< 	return XTextWidth(that.font_info, string.c_str(), string.size());
+---
+> FontMetrics::stringWidth ( String* string ) const {
+> 	return XTextWidth(that.font_info, string->c_str(), string->size());
+Index: awt/FontMetrics.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/FontMetrics.hh,v
+retrieving revision 1.1
+diff -r1.1 FontMetrics.hh
+19c19
+< 	public: FontMetrics ( const awt::Font& f );
+---
+> 	public: FontMetrics ( awt::Font* f );
+22c22
+< 	public: virtual unsigned int stringWidth ( const String& ) const;
+---
+> 	public: virtual unsigned int stringWidth ( String* ) const;
+Index: awt/Frame.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Frame.cc,v
+retrieving revision 1.3
+diff -r1.3 Frame.cc
+28c28
+< Frame::Frame() : isMapped(false), title("An Xwing App") {
+---
+> Frame::Frame() : isMapped(false), title(new String("An Xwing App")) {
+32c32
+< Frame::Frame ( const String& s ) : isMapped(false), title(s) {
+---
+> Frame::Frame ( String* s ) : isMapped(false), title(s) {
+46c46
+< 	Dimension size = that.getSize();
+---
+> 	Dimension* size = that.getSize();
+48,49c48,49
+< 	that.width = size.width;
+< 	that.height = size.height;
+---
+> 	that.width = size->width;
+> 	that.height = size->height;
+55,56d54
+< 	Color background_gray(204,204,204);
+< 
+63c61
+< 								background_gray.getRGB());
+---
+> 								Color::gray->getRGB());
+67c65
+< 	char* window_name =	CC<char*>(that.title.c_str());
+---
+> 	char* window_name =	CC<char*>(that.title->c_str());
+76a75
+> 				  PointerMotionMask |
+102c101
+< 				that.update(that.native_graphics);
+---
+> 				that.update(&(that.native_graphics));
+109a109,114
+> 			case MotionNotify:
+> 				out << "Mouse @ ("
+> 					<< report.xmotion.x << ", "
+> 					<< report.xmotion.y << ")" << nl;
+> 				break;
+> 
+125c130
+< Graphics&
+---
+> Graphics*
+127c132
+< 	return that.native_graphics;
+---
+> 	return &(that.native_graphics);
+131c136
+< Frame::paint ( Graphics& ) {
+---
+> Frame::paint ( Graphics* ) {
+Index: awt/Frame.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Frame.hh,v
+retrieving revision 1.2
+diff -r1.2 Frame.hh
+27c27
+< 	private: String title;
+---
+> 	private: String* title;
+33c33
+< 	public: Frame ( const String& );
+---
+> 	public: Frame ( String* );
+37,38c37,38
+< 	public: virtual Graphics& getGraphics();
+< 	public: virtual void paint ( Graphics& );
+---
+> 	public: virtual Graphics* getGraphics();
+> 	public: virtual void paint ( Graphics* );
+50d49
+< 	// public: virtual void output ( TabStream& ) const;
+Index: awt/Graphics.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Graphics.cc,v
+retrieving revision 1.2
+diff -r1.2 Graphics.cc
+24,26c24,26
+< FontMetrics
+< Graphics::getFontMetrics ( const awt::Font& font ) {
+< 	return FontMetrics(font);
+---
+> FontMetrics*
+> Graphics::getFontMetrics ( awt::Font* font ) {
+> 	return new FontMetrics(font);
+Index: awt/Graphics.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Graphics.hh,v
+retrieving revision 1.3
+diff -r1.3 Graphics.hh
+17a18
+> 	public: virtual void drawPoint ( unsigned int, unsigned int ) = 0;
+25c26
+< 	public: virtual void drawString ( const String&,
+---
+> 	public: virtual void drawString ( String*,
+29,34c30,35
+< 	public: virtual void setColor ( const Color& ) = 0;
+< 	public: virtual void setFont ( const awt::Font& ) = 0;
+< 	public: virtual Color getColor() = 0;
+< 	public: virtual awt::Font getFont() = 0;
+< 	public: virtual FontMetrics getFontMetrics ( const awt::Font& );
+< 	public: virtual FontMetrics getFontMetrics() = 0;
+---
+> 	public: virtual void setColor ( Color* ) = 0;
+> 	public: virtual void setFont ( awt::Font* ) = 0;
+> 	public: virtual Color* getColor() = 0;
+> 	public: virtual awt::Font* getFont() = 0;
+> 	public: virtual FontMetrics* getFontMetrics ( awt::Font* );
+> 	public: virtual FontMetrics* getFontMetrics() = 0;
+Index: awt/GridLayout.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/GridLayout.cc,v
+retrieving revision 1.3
+diff -r1.3 GridLayout.cc
+37c37
+< GridLayout::addLayoutComponent ( String& n, Component& c ) {
+---
+> GridLayout::addLayoutComponent ( String*, Component* ) {
+41c41
+< GridLayout::removeLayoutComponent ( Component& c ) {
+---
+> GridLayout::removeLayoutComponent ( Component* ) {
+45c45
+< GridLayout::minimumLayoutSize ( awt::Container& parent ) {
+---
+> GridLayout::minimumLayoutSize ( awt::Container* ) {
+49c49
+< GridLayout::preferredLayoutSize ( awt::Container& parent ) {
+---
+> GridLayout::preferredLayoutSize ( awt::Container* ) {
+53c53
+< GridLayout::layoutContainer ( awt::Container& parent ) const {
+---
+> GridLayout::layoutContainer ( awt::Container* parent ) const {
+59c59
+< 	Dimension size = parent.getSize();
+---
+> 	Dimension* size = parent->getSize();
+61,62c61,62
+< 	size.setSize(size.width - (2*that.hgap),
+< 				 size.height - (2*that.vgap));
+---
+> 	size->setSize(size->width - (2*that.hgap),
+> 				 size->height - (2*that.vgap));
+71,72c71,72
+< 	unsigned int each_width = ((size.width - ((cols-1)*that.hgap)) / cols);
+< 	unsigned int each_height = ((size.height - ((rows-1)*that.vgap)) / rows);
+---
+> 	unsigned int each_width = ((size->width - ((cols-1)*that.hgap)) / cols);
+> 	unsigned int each_height = ((size->height - ((rows-1)*that.vgap)) / rows);
+74c74
+< 	unsigned int count = parent.getComponentCount();
+---
+> 	unsigned int count = parent->getComponentCount();
+87,89c87,89
+<  				Component& c = DC<Component&>(parent.getComponent(k));
+< 				c.setSize(each_width, each_height);
+< 				c.setLocation(x, y);
+---
+>  				Component* c = parent->getComponent(k);
+> 				c->setSize(each_width, each_height);
+> 				c->setLocation(x, y);
+Index: awt/GridLayout.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/GridLayout.hh,v
+retrieving revision 1.2
+diff -r1.2 GridLayout.hh
+26,30c26,30
+< 	public: virtual void addLayoutComponent ( String&, Component& );
+< 	public: virtual void removeLayoutComponent ( Component& );
+< 	public: virtual Dimension minimumLayoutSize ( awt::Container& );
+< 	public: virtual Dimension preferredLayoutSize ( awt::Container& );
+< 	public: virtual void layoutContainer ( awt::Container& ) const;
+---
+> 	public: virtual void addLayoutComponent ( String*, Component* );
+> 	public: virtual void removeLayoutComponent ( Component* );
+> 	public: virtual Dimension minimumLayoutSize ( awt::Container* );
+> 	public: virtual Dimension preferredLayoutSize ( awt::Container* );
+> 	public: virtual void layoutContainer ( awt::Container* ) const;
+Index: awt/LayoutManager.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/LayoutManager.hh,v
+retrieving revision 1.2
+diff -r1.2 LayoutManager.hh
+22,26c22,26
+< 	public: virtual void addLayoutComponent ( String&, Component& ) = 0;
+< 	public: virtual void removeLayoutComponent ( Component& ) = 0;
+< 	public: virtual Dimension minimumLayoutSize ( awt::Container& ) = 0;
+< 	public: virtual Dimension preferredLayoutSize ( awt::Container& ) = 0;
+< 	public: virtual void layoutContainer ( awt::Container& ) const = 0;
+---
+> 	public: virtual void addLayoutComponent ( String*, Component* ) = 0;
+> 	public: virtual void removeLayoutComponent ( Component* ) = 0;
+> 	public: virtual Dimension minimumLayoutSize ( awt::Container* ) = 0;
+> 	public: virtual Dimension preferredLayoutSize ( awt::Container* ) = 0;
+> 	public: virtual void layoutContainer ( awt::Container* ) const = 0;
+Index: awt/NativeGraphics.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/NativeGraphics.cc,v
+retrieving revision 1.2
+diff -r1.2 NativeGraphics.cc
+20c20
+< const awt::Font NativeGraphics::SWING_FONT("lucidasans-bold-12", 2, 12);
+---
+> const awt::Font* NativeGraphics::SWING_FONT = new awt::Font("lucidasans-bold-12", 2, 12);
+26c26
+< 		gc(0), clip_mask(0), font(that.SWING_FONT),
+---
+> 		gc(0), clip_mask(0), font(that.SWING_FONT->clone()),
+30a31,35
+> NativeGraphics::drawPoint ( unsigned int x, unsigned int y ) {
+> 	XDrawPoint(glob::display, glob::win, that.gc, x, y);
+> 	}
+> 
+> void
+85c90
+< 	that.setColor(Color(0,0,0));
+---
+> 	that.setColor(new Color(0,0,0));
+91c96
+< 	that.setColor(Color(255,255,255));
+---
+> 	that.setColor(new Color(255,255,255));
+97c102
+< 	that.setColor(save_color);
+---
+> 	that.setColor(new Color(save_color));
+101c106
+< NativeGraphics::drawString ( const String& s,
+---
+> NativeGraphics::drawString ( String* s,
+111c116
+< 					 s.c_str(), s.size());
+---
+> 					 s->c_str(), s->size());
+137c142
+< 	// X windows rectangle semantics.
+---
+> 	// X windows rectangle semantics->
+157,158c162,163
+< NativeGraphics::setColor ( const Color& c ) {
+< 	XSetForeground(glob::display, that.gc, c.getRGB());
+---
+> NativeGraphics::setColor ( Color* c ) {
+> 	XSetForeground(glob::display, that.gc, c->getRGB());
+162c167
+< NativeGraphics::setFont ( const awt::Font& font ) {
+---
+> NativeGraphics::setFont ( awt::Font* font ) {
+165c170
+< 	out << "setFont(): font: " << that.font << nl;
+---
+> 	out << "setFont(): font: " << *that.font << nl;
+167c172
+< 	Font font_id = XLoadFont(glob::display, font.getFontName().c_str());
+---
+> 	Font font_id = XLoadFont(glob::display, that.font->getFontName()->c_str());
+171c176
+< Color
+---
+> Color*
+173c178
+< 	return Color(that.values.foreground);
+---
+> 	return new Color(that.values.foreground);
+176c181
+< awt::Font
+---
+> awt::Font*
+181c186
+< FontMetrics
+---
+> FontMetrics*
+183c188
+< 	return FontMetrics(that.font);
+---
+> 	return new FontMetrics(that.font);
+200c205
+< 	that.values.background = Color::gray.getRGB();
+---
+> 	that.values.background = Color::gray->getRGB();
+212c217
+< 	that.setFont(that.SWING_FONT);
+---
+> 	that.setFont(that.SWING_FONT->clone());
+Index: awt/NativeGraphics.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/NativeGraphics.hh,v
+retrieving revision 1.2
+diff -r1.2 NativeGraphics.hh
+17c17
+< 	public: static const awt::Font SWING_FONT;
+---
+> 	public: static const awt::Font* SWING_FONT;
+24c24
+< 	private: awt::Font font;
+---
+> 	private: awt::Font* font;
+35a36
+> 	public: virtual void drawPoint ( unsigned int, unsigned int );
+43c44
+< 	public: virtual void drawString ( const String& s,
+---
+> 	public: virtual void drawString ( String* s,
+47,51c48,52
+< 	public: virtual void setColor ( const Color& );
+< 	public: virtual void setFont ( const awt::Font& );
+< 	public: virtual Color getColor();
+< 	public: virtual awt::Font getFont();
+< 	public: virtual FontMetrics getFontMetrics();
+---
+> 	public: virtual void setColor ( Color* );
+> 	public: virtual void setFont ( awt::Font* );
+> 	public: virtual Color* getColor();
+> 	public: virtual awt::Font* getFont();
+> 	public: virtual FontMetrics* getFontMetrics();
+Index: awt/Rectangle.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Rectangle.cc,v
+retrieving revision 1.2
+diff -r1.2 Rectangle.cc
+25a26,32
+> bool
+> Rectangle::contains ( int x, int y ) const {
+> 	return
+> 		(x > that.x) || (y > that.y) ||
+> 		(x < (that.x + that.width)) || (y < (that.y + that.height));
+> 	}
+> 
+Index: awt/Rectangle.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Rectangle.hh,v
+retrieving revision 1.2
+diff -r1.2 Rectangle.hh
+23a24
+> 	public: bool contains ( int x, int y ) const;
+Index: awt/inc
+===================================================================
+RCS file: /home/src/gui/src/awt/inc,v
+retrieving revision 1.3
+diff -r1.3 inc
+16c16,17
+< #include <awt/Event.hh>
+---
+> #include <awt/AWTEvent.hh>
+> 
+30a32,35
+> 
+> #include <awt/ComponentEvent.hh>
+> #include <awt/InputEvent.hh>
+> #include <awt/MouseEvent.hh>
+cvs diff: Diffing gc
+Index: gc/Makefile
+===================================================================
+RCS file: /home/src/gui/src/gc/Makefile,v
+retrieving revision 1.2
+diff -r1.2 Makefile
+430c430
+< 	install -m 0755 -d $(LIB_DIR)
+---
+> 	-install -m 0755 -d $(LIB_DIR) 2> /dev/null
+432,433c432,437
+< 	install -m 0755 -d $(INC_DIR)
+< 	install -m 0644 gc.h gc_cpp.h $(INC_DIR)
+---
+> 	-install -m 0755 -d $(INC_DIR) 2> /dev/null
+> 	for FILE in gc.h gc_cpp.h ; do \
+> 		if [ "`diff $$FILE $(INC_DIR)/$$FILE`" ] ; then \
+> 			install -m 0644 $$FILE $(INC_DIR); \
+> 			fi; \
+> 		done
+cvs diff: Diffing gc/Mac_files
+cvs diff: Diffing gc/cord
+cvs diff: Diffing gc/cord/private
+cvs diff: Diffing gc/include
+cvs diff: Diffing gc/include/private
+cvs diff: Diffing xwing
+Index: xwing/XButton.cc
+===================================================================
+RCS file: /home/src/gui/src/xwing/XButton.cc,v
+retrieving revision 1.3
+diff -r1.3 XButton.cc
+22c22
+< XButton::XButton ( const String& s ) : label(s) {
+---
+> XButton::XButton ( String* s ) : label(s->clone()) {
+26,28c26,28
+< XButton::paint ( Graphics& g ) {
+< 	Dimension size = that.getSize();
+< 	g.draw3DRect(0, 0, size.width, size.height);
+---
+> XButton::paint ( Graphics* g ) {
+> 	Dimension* size = that.getSize();
+> 	g->draw3DRect(0, 0, size->width, size->height);
+30,32c30,32
+< 	if ( that.label.size() ) {
+< 		Color save = g.getColor();
+< 		g.setColor(Color::lavender);
+---
+> 	if ( that.label->size() ) {
+> 		Color* save = g->getColor();
+> 		g->setColor(Color::lavender->clone());
+34,36c34,36
+< 		FontMetrics m = g.getFontMetrics();
+< 		unsigned int x = (size.width - m.stringWidth(that.label)) / 2;
+< 		unsigned int y = (size.height - m.getHeight()) / 2;
+---
+> 		FontMetrics* m = g->getFontMetrics();
+> 		unsigned int x = (size->width - m->stringWidth(that.label)) / 2;
+> 		unsigned int y = (size->height - m->getHeight()) / 2;
+38c38
+< 		g.drawString(that.label, x, y);
+---
+> 		g->drawString(that.label, x, y);
+40c40
+< 		g.setColor(save);
+---
+> 		g->setColor(save);
+Index: xwing/XButton.hh
+===================================================================
+RCS file: /home/src/gui/src/xwing/XButton.hh,v
+retrieving revision 1.3
+diff -r1.3 XButton.hh
+15c15
+< 	private: String label;
+---
+> 	private: String* label;
+20,21c20,21
+< 	public: XButton ( const String& );
+< 	public: virtual void paint ( Graphics& );
+---
+> 	public: XButton ( String* );
+> 	public: virtual void paint ( Graphics* );
+Index: xwing/XComponent.hh
+===================================================================
+RCS file: /home/src/gui/src/xwing/XComponent.hh,v
+retrieving revision 1.2
+diff -r1.2 XComponent.hh
+18c18
+< 	public: virtual void paint ( Graphics& ) = 0;
+---
+> 	public: virtual void paint ( Graphics* ) = 0;
+Index: xwing/XFrame.cc
+===================================================================
+RCS file: /home/src/gui/src/xwing/XFrame.cc,v
+retrieving revision 1.4
+diff -r1.4 XFrame.cc
+21c21
+< XFrame::XFrame ( const String& title ) : Frame(title) {
+---
+> XFrame::XFrame ( String* title ) : Frame(title->clone()) {
+24c24,27
+< awt::Container&
+---
+> XFrame::XFrame ( const String& title ) : Frame(title.clone()) {
+> 	}
+> 
+> awt::Container*
+26c29
+< 	return that.content_pane;
+---
+> 	return &(that.content_pane);
+44c47
+< XFrame::paint ( Graphics& g ) {
+---
+> XFrame::paint ( Graphics* g ) {
+49c52
+< XFrame::paintAll ( Graphics& g ) {
+---
+> XFrame::paintAll ( Graphics* g ) {
+54c57
+< XFrame::paintComponents ( Graphics& g ) {
+---
+> XFrame::paintComponents ( Graphics* g ) {
+59c62
+< XFrame::update ( Graphics& g ) {
+---
+> XFrame::update ( Graphics* g ) {
+Index: xwing/XFrame.hh
+===================================================================
+RCS file: /home/src/gui/src/xwing/XFrame.hh,v
+retrieving revision 1.4
+diff -r1.4 XFrame.hh
+22a23
+> 	public: XFrame ( String* );
+24c25
+< 	public: virtual awt::Container& getContentPane();
+---
+> 	public: virtual awt::Container* getContentPane();
+27,30c28,31
+< 	public: virtual void paint ( Graphics& );
+< 	public: virtual void paintAll ( Graphics& );
+< 	public: virtual void paintComponents ( Graphics& );
+< 	public: virtual void update ( Graphics& );
+---
+> 	public: virtual void paint ( Graphics* );
+> 	public: virtual void paintAll ( Graphics* );
+> 	public: virtual void paintComponents ( Graphics* );
+> 	public: virtual void update ( Graphics* );
+Index: xwing/XLabel.cc
+===================================================================
+RCS file: /home/src/gui/src/xwing/XLabel.cc,v
+retrieving revision 1.3
+diff -r1.3 XLabel.cc
+22c22
+< XLabel::XLabel ( const String& s ) : label(s) {
+---
+> XLabel::XLabel ( String* s ) : label(s->clone()) {
+26,27c26,27
+< XLabel::paint ( Graphics& g ) {
+< 	Dimension size = that.getSize();
+---
+> XLabel::paint ( Graphics* g ) {
+> 	Dimension* size = that.getSize();
+29,31c29,31
+< 	if ( that.label.size() ) {
+< 		Color save = g.getColor();
+< 		g.setColor(Color::lavender);
+---
+> 	if ( that.label->size() ) {
+> 		Color* save = g->getColor();
+> 		g->setColor(Color::lavender->clone());
+33,35c33,35
+< 		FontMetrics m = g.getFontMetrics();
+< 		unsigned int x = (size.width - m.stringWidth(that.label)) / 2;
+< 		unsigned int y = (size.height - m.getHeight()) / 2;
+---
+> 		FontMetrics* m = g->getFontMetrics();
+> 		unsigned int x = (size->width - m->stringWidth(that.label)) / 2;
+> 		unsigned int y = (size->height - m->getHeight()) / 2;
+37c37
+< 		g.drawString(that.label, x, y);
+---
+> 		g->drawString(that.label, x, y);
+39c39
+< 		g.setColor(save);
+---
+> 		g->setColor(save);
+Index: xwing/XLabel.hh
+===================================================================
+RCS file: /home/src/gui/src/xwing/XLabel.hh,v
+retrieving revision 1.3
+diff -r1.3 XLabel.hh
+15c15
+< 	private: String label;
+---
+> 	private: String* label;
+20,21c20,21
+< 	public: XLabel ( const String& );
+< 	public: virtual void paint ( Graphics& g );
+---
+> 	public: XLabel ( String* );
+> 	public: virtual void paint ( Graphics* g );
+Index: xwing/XPanel.cc
+===================================================================
+RCS file: /home/src/gui/src/xwing/XPanel.cc,v
+retrieving revision 1.1
+diff -r1.1 XPanel.cc
+23c23
+< XPanel::paint ( Graphics& ) {
+---
+> XPanel::paint ( Graphics* ) {
+Index: xwing/XPanel.hh
+===================================================================
+RCS file: /home/src/gui/src/xwing/XPanel.hh,v
+retrieving revision 1.1
+diff -r1.1 XPanel.hh
+18c18
+< 	public: virtual void paint ( Graphics& );
+---
+> 	public: virtual void paint ( Graphics* );
+Index: xwing/frametest.cc
+===================================================================
+RCS file: /home/src/gui/src/xwing/frametest.cc,v
+retrieving revision 1.6
+diff -r1.6 frametest.cc
+7,8c7,8
+< 	XFrame frame("Xwing App");
+< 	frame.setSize(400, 300);
+---
+> 	XFrame* frame = new XFrame("Xwing App");
+> 	frame->setSize(400, 300);
+10,32c10,32
+< 	XPanel panel;
+< 	XLabel label("This is label #1.");
+< 	XButton button2("This is the first button.");
+< 	XLabel label2("This is label #2.");
+< 
+< 	XButton inner1("Okay");
+< 	XButton inner2("Cancel");
+< 	XButton inner3("Cancel");
+< 	XButton inner4("Ok");
+< 
+< 	panel.setLayout(GridLayout(2,2));
+< 	panel.add(inner1);
+< 	panel.add(inner2);
+< 	panel.add(inner3);
+< 	panel.add(inner4);
+< 
+< 	awt::Container& c = frame.getContentPane();
+< 	c.setLayout(GridLayout(2,2));
+< 
+< 	c.add(panel);
+< 	c.add(label);
+< 	c.add(label2);
+< 	c.add(button2);
+---
+> 	XPanel* panel = new XPanel();
+> 	XLabel* label = new XLabel(new String("This is label #1."));
+> 	XButton* button2 = new XButton(new String("This is the first button."));
+> 	XLabel* label2 = new XLabel(new String("This is label #2."));
+> 
+> 	XButton* inner1 = new XButton(new String("Okay"));
+> 	XButton* inner2 = new XButton(new String("Cancel"));
+> 	XButton* inner3 = new XButton(new String("Cancel"));
+> 	XButton* inner4 = new XButton(new String("Ok"));
+> 
+> 	panel->setLayout(new GridLayout(2,2));
+> 	panel->add(inner1);
+> 	panel->add(inner2);
+> 	panel->add(inner3);
+> 	panel->add(inner4);
+> 
+> 	awt::Container* c = frame->getContentPane();
+> 	c->setLayout(new GridLayout(2,2));
+> 
+> 	c->add(panel);
+> 	c->add(label);
+> 	c->add(label2);
+> 	c->add(button2);
+34c34
+< 	frame.setVisible(true);
+---
+> 	frame->setVisible(true);

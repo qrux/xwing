@@ -1,0 +1,1067 @@
+cvs diff: Diffing .
+cvs diff: Diffing awt
+Index: awt/AWTEvent.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/AWTEvent.cc,v
+retrieving revision 1.2
+diff -r1.2 AWTEvent.cc
+12a13,19
+> #include <awt/Color.hh>
+> #include <awt/Font.hh>
+> #include <awt/FontMetrics.hh>
+> #include <awt/Dimension.hh>
+> #include <awt/Rectangle.hh>
+> #include <awt/Graphics.hh>
+> 
+14a22,28
+> 
+> #include <awt/ComponentEvent.hh>
+> #include <awt/InputEvent.hh>
+> #include <awt/MouseEvent.hh>
+> #include <awt/EventListener.hh>
+> #include <awt/MouseListener.hh>
+> #include <awt/Component.hh>
+Index: awt/AWTEvent.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/AWTEvent.hh,v
+retrieving revision 1.2
+diff -r1.2 AWTEvent.hh
+11a12
+> class Component;
+Index: awt/ActionEvent.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/ActionEvent.cc,v
+retrieving revision 1.3
+diff -r1.3 ActionEvent.cc
+27a28,35
+> ActionEvent::ActionEvent ( const Object* s, const String* cmd ) :
+> 		AWTEvent(s, ActionEvent::ACTION_PERFORMED), command(cmd) {
+> 	}
+> 
+> ActionEvent::ActionEvent ( const Object* s, const String& cmd ) :
+> 		AWTEvent(s, ActionEvent::ACTION_PERFORMED), command(cmd) {
+> 	}
+> 
+Index: awt/ActionEvent.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/ActionEvent.hh,v
+retrieving revision 1.3
+diff -r1.3 ActionEvent.hh
+14a15,16
+> 	public: static const unsigned int ACTION_PERFORMED = 0;
+> 
+20a23,24
+> 	public: ActionEvent ( const Object*, const String* );
+> 	public: ActionEvent ( const Object*, const String& );
+Index: awt/ActionListener.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/ActionListener.cc,v
+retrieving revision 1.3
+diff -r1.3 ActionListener.cc
+15a16,17
+> 
+> #include <awt/EventListener.hh>
+Index: awt/ActionListener.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/ActionListener.hh,v
+retrieving revision 1.3
+diff -r1.3 ActionListener.hh
+13c13
+< class ActionListener : public ObjectAdapter {
+---
+> class ActionListener : public EventListener {
+Index: awt/Color.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Color.cc,v
+retrieving revision 1.4
+diff -r1.4 Color.cc
+16a17
+> const Color* const Color::darkgray = new Color(153,153,153);
+Index: awt/Color.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Color.hh,v
+retrieving revision 1.4
+diff -r1.4 Color.hh
+21a22
+> 	public: static const Color* const darkgray;
+Index: awt/Component.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Component.cc,v
+retrieving revision 1.6
+diff -r1.6 Component.cc
+18a19,28
+> 
+> #include <awt/EventObject.hh>
+> #include <awt/AWTEvent.hh>
+> #include <awt/ComponentEvent.hh>
+> #include <awt/InputEvent.hh>
+> #include <awt/MouseEvent.hh>
+> 
+> #include <awt/EventListener.hh>
+> #include <awt/MouseListener.hh>
+> 
+25,26c35,37
+< 	x(0), y(0), width(0), height(0),
+< 	foreground(Color::black->clone()), background(Color::gray->clone()) {
+---
+> 		parent(0), graphics(0),
+> 		x(0), y(0), width(0), height(0),
+> 		foreground(Color::black->clone()), background(Color::gray->clone()) {
+46c57
+< 	return CC<Component*>(that.parent)->getGraphics();
+---
+> 	return that.graphics;
+99a111,116
+> Component::repaint() {
+> 	if ( that.graphics )
+> 		that.paint(that.graphics);
+> 	}
+> 
+> void
+105c122,125
+< 	Color* save = g->getColor();
+---
+> 	if ( that.graphics )
+> 		delete that.graphics;
+> 	that.graphics = g->create();
+> 
+108c128,129
+< 	g->setColor(save);
+---
+> 
+> 	g->setColor(that.foreground);
+114c135,191
+< 	that.paint(g);
+---
+> 	that.repaint();
+> 	}
+> 
+> void
+> Component::addMouseListener ( MouseListener* l ) {
+> 	that.ml_list.add(l);
+> 	}
+> 
+> void
+> Component::dispatchEvent ( AWTEvent* evt ) {
+> 	that.processEvent(evt);
+> 	}
+> 
+> void
+> Component::processEvent ( AWTEvent* evt ) {
+> 	Component* parent = that.getParent();
+> 	if ( parent )
+> 		parent->processEvent(evt);
+> 
+> 	unsigned int count = ml_list.size();
+> 
+> 	if ( that.ml_list.size() ) {
+> 		MouseEvent* mouse_event = DC<MouseEvent*>(evt);
+> 		if ( mouse_event ) {
+> 			that.processMouseEvent(mouse_event);
+> 			} }
+> 	}
+> 
+> void
+> Component::processMouseEvent ( MouseEvent* evt ) {
+> 	MouseListener* l;
+> 	unsigned int count = that.ml_list.size();
+> 
+> 	for ( int i = 0; i < count; ++i ) {
+> 		l = that.ml_list.get(i);
+> 
+> 		switch ( evt->getId() ) {
+> 			case MouseEvent::MOUSE_PRESSED:
+> 				l->mousePressed(evt);
+> 				break;
+> 
+> 			case MouseEvent::MOUSE_RELEASED:
+> 				l->mouseReleased(evt);
+> 				break;
+> 
+> 			case MouseEvent::MOUSE_ENTERED:
+> 				l->mouseEntered(evt);
+> 				break;
+> 
+> 			case MouseEvent::MOUSE_EXITED:
+> 				l->mouseExited(evt);
+> 				break;
+> 
+> 			case MouseEvent::MOUSE_CLICKED:
+> 				l->mouseClicked(evt);
+> 				break;
+> 			} }
+Index: awt/Component.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Component.hh,v
+retrieving revision 1.5
+diff -r1.5 Component.hh
+20a21
+> 	private: Graphics* graphics;
+30a32,33
+> 	private: Vector<MouseListener*> ml_list;
+> 
+46a50
+> 	public: virtual void repaint();
+48a53,57
+> 
+> 	public: void addMouseListener ( MouseListener* );
+> 	public: virtual void dispatchEvent ( AWTEvent* );
+> 	protected: virtual void processEvent ( AWTEvent* );
+> 	protected: virtual void processMouseEvent ( MouseEvent* );
+Index: awt/ComponentEvent.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/ComponentEvent.cc,v
+retrieving revision 1.1
+diff -r1.1 ComponentEvent.cc
+21d20
+< #include <awt/Component.hh>
+22a22,23
+> #include <awt/EventObject.hh>
+> #include <awt/AWTEvent.hh>
+23a25,30
+> 
+> #include <awt/InputEvent.hh>
+> #include <awt/MouseEvent.hh>
+> #include <awt/EventListener.hh>
+> #include <awt/MouseListener.hh>
+> #include <awt/Component.hh>
+Index: awt/Container.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Container.cc,v
+retrieving revision 1.5
+diff -r1.5 Container.cc
+21a22,31
+> 
+> #include <awt/EventObject.hh>
+> #include <awt/AWTEvent.hh>
+> #include <awt/ComponentEvent.hh>
+> #include <awt/InputEvent.hh>
+> #include <awt/MouseEvent.hh>
+> 
+> #include <awt/EventListener.hh>
+> #include <awt/MouseListener.hh>
+> 
+72,76d81
+< 	}
+< 
+< Graphics*
+< awt::Container::getGraphics() {
+< 	return that.getParent()->getGraphics();
+Index: awt/Container.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Container.hh,v
+retrieving revision 1.4
+diff -r1.4 Container.hh
+15c15
+< class Container : public ::Component {
+---
+> class Container : public Component {
+27d26
+< 	public: virtual Graphics* getGraphics();
+Index: awt/Frame.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/Frame.cc,v
+retrieving revision 1.6
+diff -r1.6 Frame.cc
+19a20,29
+> 
+> #include <awt/EventObject.hh>
+> #include <awt/AWTEvent.hh>
+> #include <awt/ComponentEvent.hh>
+> #include <awt/InputEvent.hh>
+> #include <awt/MouseEvent.hh>
+> 
+> #include <awt/EventListener.hh>
+> #include <awt/MouseListener.hh>
+> 
+81a92,93
+> 				  ButtonReleaseMask |
+> 				  ButtonMotionMask |
+99a112,122
+> 	int mouse_x;
+> 	int mouse_y;
+> 	Component* old_comp_under_mouse = 0;
+> 	Component* comp_under_mouse = 0;
+> 	Component* comp_pressed = 0;
+> 	bool generate_click = false;
+> 
+> 	int mouse_event_type;
+> 	unsigned long mouse_time;
+> 	AWTEvent* awt_event = 0;
+> 
+103a127,132
+> 				////////////////////////////////////////
+> 				//
+> 				// Expose (paint)
+> 				//
+> 				////////////////////////////////////////
+> 
+107a137,142
+> 				////////////////////////////////////////
+> 				//
+> 				// ConfigureNotify (resize)
+> 				//
+> 				////////////////////////////////////////
+> 
+112a148,153
+> 				////////////////////////////////////////
+> 				//
+> 				// MotionNotify (mouse movement)
+> 				//
+> 				////////////////////////////////////////
+> 
+114,121c155,213
+< 				out << push
+< 					<< "Mouse on Component : "
+< 					<< that.getComponentAt(report.xmotion.x, report.xmotion.y)
+< 					<< nl
+< 					<< pop;
+< // 				out << "Mouse @ ("
+< // 					<< report.xmotion.x << ", "
+< // 					<< report.xmotion.y << ")" << nl;
+---
+> 				mouse_x = report.xmotion.x;
+> 				mouse_y = report.xmotion.y;
+> 				mouse_time = report.xmotion.time;
+> 
+> 				comp_under_mouse =
+> 					that.getComponentAt(mouse_x, mouse_y);
+> 
+> 				if ( comp_under_mouse != old_comp_under_mouse ) {
+> 
+> 					out << push
+> 						<< "Mouse from ["
+> 						<< old_comp_under_mouse << "] --> ["
+> 						<< comp_under_mouse << "]." << nl
+> 						<< pop;
+> 
+> 					////////////////////////////////////////
+> 					// This means that the pointer has changed
+> 					// component locations.  The old component
+> 					// is old_comp_under_mouse, and the new
+> 					// is comp_under_mouse.
+> 					//
+> 					// Send EXITED to old.
+> 					////////////////////////////////////////
+> 
+> 					if ( old_comp_under_mouse ) {
+> 						mouse_event_type = MouseEvent::MOUSE_EXITED;
+> 						awt_event =
+> 							new MouseEvent(comp_under_mouse,
+> 										   mouse_event_type,
+> 										   mouse_time,
+> 										   0,
+> 										   mouse_x, mouse_y,
+> 										   0);
+> 
+> 						old_comp_under_mouse->dispatchEvent(awt_event);
+> 						}
+> 
+> 					////////////////////////////////////////
+> 					// Send ENTERED to new.
+> 					////////////////////////////////////////
+> 
+> 					if ( comp_under_mouse ) {
+> 						mouse_event_type = MouseEvent::MOUSE_ENTERED;
+> 						awt_event =
+> 							new MouseEvent(comp_under_mouse,
+> 										   mouse_event_type,
+> 										   mouse_time,
+> 										   0,
+> 										   mouse_x, mouse_y,
+> 										   0);
+> 
+> 						comp_under_mouse->dispatchEvent(awt_event);
+> 						} }
+> 
+> 				////////////////////////////////////////
+> 				// Set old_comp = comp.
+> 				////////////////////////////////////////
+> 
+> 				old_comp_under_mouse = comp_under_mouse;
+123a216,221
+> 				////////////////////////////////////////
+> 				//
+> 				// Button??? (mouse button press)
+> 				//
+> 				////////////////////////////////////////
+> 
+124a223,281
+> 			case ButtonRelease:
+> 				mouse_x = report.xbutton.x;
+> 				mouse_y = report.xbutton.y;
+> 				mouse_time = report.xbutton.time;
+> 
+> 				comp_under_mouse =
+> 					that.getComponentAt(mouse_x, mouse_y);
+> 
+> 				switch ( report.type ) {
+> 					case ButtonPress:
+> 						mouse_event_type = MouseEvent::MOUSE_PRESSED;
+> 						if ( !comp_pressed )
+> 							comp_pressed = comp_under_mouse;
+> 						break;
+> 
+> 					case ButtonRelease:
+> 						mouse_event_type = MouseEvent::MOUSE_RELEASED;
+> 						break;
+> 					}
+> 
+> 				awt_event =
+> 					new MouseEvent(comp_pressed,
+> 								   mouse_event_type,
+> 								   mouse_time,
+> 								   0,
+> 								   mouse_x, mouse_y,
+> 								   0);
+> 
+> 				comp_pressed->dispatchEvent(awt_event);
+> 
+> 				if ( mouse_event_type == MouseEvent::MOUSE_RELEASED ) {
+> 					////////////////////////////////////////
+> 					// If PRESS & RELEASE were in the same
+> 					// comp, then dispatch a CLICKED event.
+> 					////////////////////////////////////////
+> 
+> 					if ( comp_under_mouse == comp_pressed ) {
+> 						awt_event =
+> 							new MouseEvent(comp_pressed,
+> 										   MouseEvent::MOUSE_CLICKED,
+> 										   mouse_time,
+> 										   0,
+> 										   mouse_x, mouse_y,
+> 										   0);
+> 
+> 						comp_pressed->dispatchEvent(awt_event);
+> 						}
+> 
+> 					comp_pressed = 0;
+> 					}
+> 
+> 				break;
+> 
+> 				////////////////////////////////////////
+> 				//
+> 				// KeyPress (key press)
+> 				//
+> 				////////////////////////////////////////
+> 
+126c283
+< 				out << "ButtonPress or KeyPress event." << nl;
+---
+> 				out << "KeyPress event, exiting." << nl;
+137a295,299
+> 
+> Component*
+> Frame::getParent() {
+> 	return 0;
+> 	}
+Index: awt/Frame.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Frame.hh,v
+retrieving revision 1.4
+diff -r1.4 Frame.hh
+37a38
+> 	public: virtual Component* getParent();
+Index: awt/Graphics.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/Graphics.hh,v
+retrieving revision 1.4
+diff -r1.4 Graphics.hh
+17a18
+> 	public: virtual Graphics* create() = 0;
+30a32,33
+> 	public: virtual void fill3DRect ( int, int,
+> 									  unsigned int, unsigned int ) = 0;
+Index: awt/GridLayout.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/GridLayout.cc,v
+retrieving revision 1.5
+diff -r1.5 GridLayout.cc
+18a19,28
+> 
+> #include <awt/EventObject.hh>
+> #include <awt/AWTEvent.hh>
+> #include <awt/ComponentEvent.hh>
+> #include <awt/InputEvent.hh>
+> #include <awt/MouseEvent.hh>
+> 
+> #include <awt/EventListener.hh>
+> #include <awt/MouseListener.hh>
+> 
+Index: awt/InputEvent.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/InputEvent.cc,v
+retrieving revision 1.1
+diff -r1.1 InputEvent.cc
+22a23,32
+> 
+> #include <awt/EventObject.hh>
+> #include <awt/AWTEvent.hh>
+> #include <awt/ComponentEvent.hh>
+> #include <awt/InputEvent.hh>
+> #include <awt/MouseEvent.hh>
+> 
+> #include <awt/EventListener.hh>
+> #include <awt/MouseListener.hh>
+> 
+Index: awt/LayoutManager.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/LayoutManager.cc,v
+retrieving revision 1.2
+diff -r1.2 LayoutManager.cc
+18a19,28
+> 
+> #include <awt/EventObject.hh>
+> #include <awt/AWTEvent.hh>
+> #include <awt/ComponentEvent.hh>
+> #include <awt/InputEvent.hh>
+> #include <awt/MouseEvent.hh>
+> 
+> #include <awt/EventListener.hh>
+> #include <awt/MouseListener.hh>
+> 
+Index: awt/MouseEvent.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/MouseEvent.hh,v
+retrieving revision 1.1
+diff -r1.1 MouseEvent.hh
+11a12
+> class Component;
+17,21c18,24
+< 	public: static const int MOUSE_EXITED = 2;
+< 	public: static const int MOUSE_FIRST = 3;
+< 	public: static const int MOUSE_MOVED = 4;
+< 	public: static const int MOUSE_PRESSED = 5;
+< 	public: static const int MOUSE_RELEASED = 6;
+---
+> 	public: static const int MOUSE_ENTERED = 3;
+> 	public: static const int MOUSE_EXITED = 4;
+> 	public: static const int MOUSE_FIRST = 5;
+> 	public: static const int MOUSE_LAST = 6;
+> 	public: static const int MOUSE_MOVED = 7;
+> 	public: static const int MOUSE_PRESSED = 8;
+> 	public: static const int MOUSE_RELEASED = 9;
+Index: awt/NativeGraphics.cc
+===================================================================
+RCS file: /home/src/gui/src/awt/NativeGraphics.cc,v
+retrieving revision 1.4
+diff -r1.4 NativeGraphics.cc
+31a32,36
+> Graphics*
+> NativeGraphics::create() {
+> 	return that.clone();
+> 	}
+> 
+119,121c124,126
+<  	XDrawImageString(glob::display, glob::win, that.gc,
+< 					 x, (y + metrics.getAscent()),
+< 					 s->c_str(), s->size());
+---
+>  	XDrawString(glob::display, glob::win, that.gc,
+> 				x, (y + metrics.getAscent()),
+> 				s->c_str(), s->size());
+146a152,191
+> NativeGraphics::fill3DRect ( int x, int y,
+> 							 unsigned int width, unsigned int height ) {
+> 
+> 	////////////////////////////////////////
+> 	// First, translate origin by (tx, ty).
+> 	////////////////////////////////////////
+> 
+> 	int x1 = x + that.tx;
+> 	int y1 = y + that.ty;
+> 
+> 	int x2 = x1 + width;
+> 	int y2 = y1 + height;
+> 
+> 	int x5 = x1 + 1;
+> 	int y5 = y1 + 1;
+> 
+> 	int x6 = x2 - 1;
+> 	int y6 = y2 - 1;
+> 
+> 	unsigned int save_color = that.values.foreground;
+> 
+> 	that.setColor(new Color(0,0,0));
+> 	that.pDrawLine(x1, y1, x2, y1); // out, top
+> 	that.pDrawLine(x1, y1, x1, y2); // out, left
+> 	that.pDrawLine(x5, y6, x6, y6); // in, bottom
+> 	that.pDrawLine(x6, y5, x6, y6); // in, right
+> 
+> 	that.setColor(new Color(save_color));
+> 	that.fillRect(x, y, width-2, height-2);
+> 
+> 	that.setColor(new Color(255,255,255));
+> 	that.pDrawLine(x5, y5, x6, y5); // in, top
+> 	that.pDrawLine(x5, y5, x5, y6); // in, left
+> 	that.pDrawLine(x1, y2, x2, y2); // out, bottom
+> 	that.pDrawLine(x2, y1, x2, y2); // out, right
+> 
+> 	that.setColor(new Color(save_color));
+> 	}
+> 
+> void
+174c219,222
+< 	XSetForeground(glob::display, that.gc, c->getRGB());
+---
+> 	that.mask = GCForeground;
+> 	that.values.foreground = c->getRGB();
+> 
+> 	that.updateGC();
+179,180d226
+< 	cerr << "Here!" << endl;
+< 
+183,184d228
+< 	err << "setFont(): font: " << that.font << nl;
+< 
+272a317,358
+> 	if ( that.gc )
+> 		XFreeGC(glob::display, that.gc);
+> 	}
+> 
+> NativeGraphics::NativeGraphics ( const NativeGraphics& orig ) :
+> 		mask(orig.mask), font(orig.font),
+> 		cx(orig.cx), cy(orig.cy), tx(orig.tx), ty(orig.ty),
+> 		width(orig.width), height(orig.height) {
+> 
+> 	that.copy(orig);
+> 	}
+> 
+> NativeGraphics&
+> NativeGraphics::operator = ( const NativeGraphics& rhs ) {
+> 	if ( this != &rhs ) {
+> 		that.mask = rhs.mask;
+> 		that.font = rhs.font;
+> 		that.cx = rhs.cx;
+> 		that.cy = rhs.cy;
+> 		that.tx = rhs.tx;
+> 		that.ty = rhs.ty;
+> 		that.width = rhs.width;
+> 		that.height = rhs.height;
+> 		}
+> 
+> 	that.copy(rhs);
+> 
+> 	return that;
+> 	}
+> 
+> void
+> NativeGraphics::copy ( const NativeGraphics& orig ) {
+> 	unsigned long m = ( GCForeground |
+> 						GCBackground |
+> 						GCLineWidth |
+> 						GCFont |
+> 						GCClipXOrigin |
+> 						GCClipYOrigin
+> 						);
+> 
+> 	XGetGCValues(glob::display, orig.gc, m, &that.values);
+> 	that.gc = XCreateGC(glob::display, glob::win, m, &that.values);
+Index: awt/NativeGraphics.hh
+===================================================================
+RCS file: /home/src/gui/src/awt/NativeGraphics.hh,v
+retrieving revision 1.3
+diff -r1.3 NativeGraphics.hh
+35a36
+> 	public: virtual Graphics* create();
+48a50
+> 	public: virtual void fill3DRect ( int, int, unsigned int, unsigned int );
+70a73,75
+> 	public: NativeGraphics ( const NativeGraphics& );
+> 	public: NativeGraphics& operator = ( const NativeGraphics& );
+> 	private: virtual void copy ( const NativeGraphics& );
+Index: awt/inc
+===================================================================
+RCS file: /home/src/gui/src/awt/inc,v
+retrieving revision 1.4
+diff -r1.4 inc
+15,20d14
+< #include <awt/EventObject.hh>
+< #include <awt/AWTEvent.hh>
+< 
+< #include <awt/ActionEvent.hh>
+< #include <awt/ActionListener.hh>
+< 
+30,33c24,26
+< #include <awt/Component.hh>
+< #include <awt/Container.hh>
+< #include <awt/Frame.hh>
+< 
+---
+> #include <awt/EventObject.hh>
+> #include <awt/AWTEvent.hh>
+> #include <awt/ActionEvent.hh>
+36a30,38
+> 
+> #include <awt/EventListener.hh>
+> #include <awt/ActionListener.hh>
+> #include <awt/MouseListener.hh>
+> #include <awt/MouseAdapter.hh>
+> 
+> #include <awt/Component.hh>
+> #include <awt/Container.hh>
+> #include <awt/Frame.hh>
+cvs diff: Diffing gc
+Index: gc/gc_cpp.h
+===================================================================
+RCS file: /home/src/gui/src/gc/gc_cpp.h,v
+retrieving revision 1.3
+diff -r1.3 gc_cpp.h
+145a146,159
+> ////////////////////////////////////////
+> //
+> // INLINE_GC_OPERATOR definition for
+> // class definitions.
+> //
+> ////////////////////////////////////////
+> 
+> #define INLINE_GC_OPERATORS \
+> 	public: void* operator new ( size_t size ) \
+> 		{ return GC_MALLOC(size); } \
+> 	public: void operator delete ( void* p ) \
+> 		{ GC_FREE(p); }
+> 
+> 
+213a228
+> #ifdef DEBUG_GC
+214a230
+> #endif /* DEBUG_GC */
+cvs diff: Diffing gc/Mac_files
+cvs diff: Diffing gc/cord
+cvs diff: Diffing gc/cord/private
+cvs diff: Diffing gc/include
+Index: gc/include/gc_cpp.h
+===================================================================
+RCS file: /home/src/gui/src/gc/include/gc_cpp.h,v
+retrieving revision 1.3
+diff -r1.3 gc_cpp.h
+145a146,159
+> ////////////////////////////////////////
+> //
+> // INLINE_GC_OPERATOR definition for
+> // class definitions.
+> //
+> ////////////////////////////////////////
+> 
+> #define INLINE_GC_OPERATORS \
+> 	public: void* operator new ( size_t size ) \
+> 		{ return GC_MALLOC(size); } \
+> 	public: void operator delete ( void* p ) \
+> 		{ GC_FREE(p); }
+> 
+> 
+213a228
+> #ifdef DEBUG_GC
+214a230
+> #endif /* DEBUG_GC */
+cvs diff: Diffing gc/include/private
+cvs diff: Diffing xwing
+Index: xwing/AbstractButton.cc
+===================================================================
+RCS file: /home/src/gui/src/xwing/AbstractButton.cc,v
+retrieving revision 1.2
+diff -r1.2 AbstractButton.cc
+23,24c23,34
+< AbstractButton::addActionListener ( const ActionListener& l ) {
+< 	that.action_listeners.add(l);
+---
+> AbstractButton::addActionListener ( ActionListener* l ) {
+> 	that.al.add(l);
+> 	}
+> 
+> void
+> AbstractButton::fireActionPerformed ( ActionEvent* e ) {
+> 	const unsigned int count = that.al.size();
+> 
+> 	out << "AbstractButton::fireActionPerformed: count: " << count << nl;
+> 
+> 	for ( int i = 0; i < count; ++i )
+> 		that.al.get(i)->actionPerformed(e);
+Index: xwing/AbstractButton.hh
+===================================================================
+RCS file: /home/src/gui/src/xwing/AbstractButton.hh,v
+retrieving revision 1.2
+diff -r1.2 AbstractButton.hh
+15c15
+< 	List action_listeners;
+---
+> 	private: Vector<ActionListener*> al;
+20c20,21
+< 	public: virtual void addActionListener ( const ActionListener& );
+---
+> 	public: virtual void addActionListener ( ActionListener* );
+> 	protected: virtual void fireActionPerformed ( ActionEvent* );
+Index: xwing/XButton.cc
+===================================================================
+RCS file: /home/src/gui/src/xwing/XButton.cc,v
+retrieving revision 1.4
+diff -r1.4 XButton.cc
+19a20
+> 	that.init();
+22c23,36
+< XButton::XButton ( String* s ) : label(s->clone()) {
+---
+> XButton::XButton ( const String* s ) :
+> 		AbstractButton(),
+> 		MouseAdapter(),
+> 		label(s->clone()) {
+> 
+> 	that.init();
+> 	}
+> 
+> XButton::XButton ( const String& s ) :
+> 		AbstractButton(),
+> 		MouseAdapter(),
+> 		label(s.clone()) {
+> 
+> 	that.init();
+27c41,60
+< 	Dimension* size = that.getSize();
+---
+> 	////////////////////////////////////////
+> 	// Colors if button pressed.
+> 	////////////////////////////////////////
+> 
+> 	if ( that.isMousePressed && that.isMouseInside ) {
+> 		that.setBackground(Color::darkgray->clone());
+> 		}
+> 	else {
+> 		that.setBackground(Color::gray->clone());
+> 		}
+> 
+> 	const Dimension* size = that.getSize();
+> 
+> 	g->setColor(that.getBackground());
+> 	g->fill3DRect(0, 0, size->width, size->height);
+> 		
+> 	////////////////////////////////////////
+> 	// Draw comp boundary.
+> 	////////////////////////////////////////
+> 
+29a63,66
+> 	////////////////////////////////////////
+> 	// Draw label.
+> 	////////////////////////////////////////
+> 
+31,32c68
+< 		Color* save = g->getColor();
+< 		g->setColor(Color::lavender->clone());
+---
+> 		g->setColor(that.getForeground());
+34,36c70,74
+< 		FontMetrics* m = g->getFontMetrics();
+< 		unsigned int x = (size->width - m->stringWidth(that.label)) / 2;
+< 		unsigned int y = (size->height - m->getHeight()) / 2;
+---
+> 		const FontMetrics* m = g->getFontMetrics();
+> 		const unsigned int sw = m->stringWidth(that.label);
+> 		const unsigned int sh = m->getHeight();
+> 		const unsigned int x = (size->width - sw) / 2;
+> 		const unsigned int y = (size->height - sh) / 2;
+39,40d76
+< 
+< 		g->setColor(save);
+41a78,131
+> 
+> 	////////////////////////////////////////
+> 	// Restore original color.
+> 	////////////////////////////////////////
+> 	}
+> 
+> void
+> XButton::mouseEntered ( MouseEvent* evt ) {
+> 	if ( that.isMouseInside == false ) {
+> 		that.isMouseInside = true;
+> 
+> 		if (that.isMousePressed == true) {
+> 			that.repaint();
+> 			} }
+> 	}
+> 
+> void
+> XButton::mouseExited ( MouseEvent* evt ) {
+> 	if ( that.isMouseInside == true ) {
+> 		that.isMouseInside = false;
+> 
+> 		if ( that.isMousePressed == true ) {
+> 			repaint();
+> 			} }
+> 	}
+> 
+> void
+> XButton::mousePressed ( MouseEvent* evt ) {
+> 	out << "XButton::mousePressed()." << nl;
+> 
+> 	that.isMousePressed = true;
+> 	repaint();
+> 	}
+> 
+> void
+> XButton::mouseReleased ( MouseEvent* evt ) {
+> 	out << "XButton::mouseReleased() -- PAIR." << nl;
+> 
+> 	that.isMousePressed = false;
+> 	if ( that.isMouseInside == true )
+> 		repaint();
+> 	}
+> 
+> void
+> XButton::mouseClicked ( MouseEvent* evt ) {
+> 	out << "XButton::mouseClicked()!" << nl;
+> 
+> 	that.fireActionPerformed(new ActionEvent(this, that.label));
+> 	}
+> 
+> void
+> XButton::init() {
+> 	that.setForeground(Color::black->clone());
+> 	that.addMouseListener(this);
+Index: xwing/XButton.hh
+===================================================================
+RCS file: /home/src/gui/src/xwing/XButton.hh,v
+retrieving revision 1.4
+diff -r1.4 XButton.hh
+13c13
+< class XButton : public AbstractButton {
+---
+> class XButton : public AbstractButton, public MouseAdapter {
+16a17,19
+> 	private: bool isMouseInside;
+> 	private: bool isMousePressed;
+> 
+20c23,24
+< 	public: XButton ( String* );
+---
+> 	public: XButton ( const String* );
+> 	public: XButton ( const String& );
+22a27,34
+> 	public: virtual void mouseEntered ( MouseEvent* );
+> 	public: virtual void mouseExited ( MouseEvent* );
+> 	public: virtual void mousePressed ( MouseEvent* );
+> 	public: virtual void mouseReleased ( MouseEvent* );
+> 	public: virtual void mouseClicked ( MouseEvent* );
+> 
+> 	private: void init();
+> 
+28a41,42
+> 	INLINE_GC_OPERATORS;
+> 
+29a44
+> 
+Index: xwing/XLabel.cc
+===================================================================
+RCS file: /home/src/gui/src/xwing/XLabel.cc,v
+retrieving revision 1.4
+diff -r1.4 XLabel.cc
+19a20
+> 	that.setForeground(Color::lavender->clone());
+22a24
+> 	that.setForeground(Color::lavender->clone());
+26,27c28,31
+< XLabel::paint ( Graphics* g ) {
+< 	Dimension* size = that.getSize();
+---
+> XLabel::setText ( const String& text ) {
+> 	that.label = text.clone();
+> 	that.repaint();
+> 	}
+28a33,34
+> void
+> XLabel::paint ( Graphics* g ) {
+30,31c36,41
+< 		Color* save = g->getColor();
+< 		g->setColor(Color::lavender->clone());
+---
+> 		Dimension* size = that.getSize();
+> 
+> 		g->setColor(that.getBackground());
+> 		g->fillRect(0, 0, size->width, size->height);
+> 
+> 		g->setColor(that.getForeground());
+37,39c47
+< 		g->drawString(that.label, x, y);
+< 
+< 		g->setColor(save);
+---
+> 		g->drawString(that.label, 0, y);
+Index: xwing/XLabel.hh
+===================================================================
+RCS file: /home/src/gui/src/xwing/XLabel.hh,v
+retrieving revision 1.4
+diff -r1.4 XLabel.hh
+20a21
+> 	public: virtual void setText ( const String& );
+Index: xwing/frametest.cc
+===================================================================
+RCS file: /home/src/gui/src/xwing/frametest.cc,v
+retrieving revision 1.7
+diff -r1.7 frametest.cc
+1c1
+< #include <base/inc>
+---
+> #include <base.hh>
+5a6,30
+> class MyLabel : public XLabel, public ActionListener {
+> 	private: unsigned int counter;
+> 	private: const String pre;
+> 
+> 	public: MyLabel() :	pre("Number of button clicks: ") {
+> 		String label = pre; label.append(String(counter));
+> 		that.setText(label);
+> 		}
+> 	public: virtual ~MyLabel() {
+> 		}
+> 
+> 	INLINE_GC_OPERATORS;
+> 
+> 	public: virtual void actionPerformed ( const ActionEvent* ) {
+> 		String label = pre; label.append(String(++counter));
+> 		that.setText(label);
+> 		}
+> 
+> 	public: virtual MyLabel* clone() const
+> 		{ return new MyLabel(that); }
+> 	public: virtual void output ( TabStream& ) const {
+> 		}
+> 	};
+> 
+> 
+12,25c37,38
+< 	XLabel* label = new XLabel(new String("This is label #1."));
+< 	XButton* button2 = new XButton(new String("This is the first button."));
+< 	XLabel* label2 = new XLabel(new String("This is label #2."));
+< 
+< 	XButton* inner1 = new XButton(new String("Okay"));
+< 	XButton* inner2 = new XButton(new String("Cancel"));
+< 	XButton* inner3 = new XButton(new String("Cancel"));
+< 	XButton* inner4 = new XButton(new String("Ok"));
+< 
+< 	panel->setLayout(new GridLayout(2,2));
+< 	panel->add(inner1);
+< 	panel->add(inner2);
+< 	panel->add(inner3);
+< 	panel->add(inner4);
+---
+> 	XButton* swing_button = new XButton("I'm an Xwing button!");
+> 	MyLabel* swing_label = new MyLabel();
+27c40
+< 	frame->setSize(400, 300);
+---
+> 	swing_button->addActionListener(swing_label);
+29,30c42,44
+< 	awt::Container* c = frame->getContentPane();
+< 	c->setLayout(new GridLayout(2,2));
+---
+> 	panel->setLayout(new GridLayout(2,1));
+> 	panel->add(swing_button);
+> 	panel->add(swing_label);
+31a46,49
+> 	frame->setSize(289,110);
+> 
+> 	awt::Container* c = frame->getContentPane();
+> 	c->setLayout(new GridLayout(1,1));
+33,35d50
+< 	c->add(label);
+< 	c->add(label2);
+< 	c->add(button2);

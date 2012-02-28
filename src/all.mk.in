@@ -1,0 +1,152 @@
+# -*- Mode: Makefile -*-
+#
+# Default Makefile include
+#
+
+# All rights reserved.
+#
+#
+# My naming conventions require you to name your test programs
+# differently from the source programs: i.e., names that can be
+# separated using make's wildcard().
+#
+# Vars:
+#
+#	NAME	:	base name of library
+#	DEPTH	:	location from top of addressable source
+#	LIBS	:	extra libraries (e.g., -lstdc++)
+#
+# Targets:
+#
+#	'all'	  :	creates lib (static only) which uses $(NAME)
+#	'clean'	  :	yeah, yeah
+#	'depend'  :	creates Makefile
+#	'install' :	puts libs into /home/lib
+#	'testers' :	'install' + creates test programs ($(TEST_OUT))
+#	'new"	  :	'clean' + 'all'
+#
+##################################################
+
+#
+# autoconf/GNU basic vars.
+#
+
+SHELL=				/bin/sh
+VPATH=				@srcdir@
+
+top_srcdir=			@top_srcdir@
+srcdir=				@srcdir@
+prefix=				@prefix@
+exec_prefix=			@exec_prefix@
+bindir=				$(exec_prefix)/bin
+infodir=			$(prefix)/info
+libdir=				$(prefix)/lib
+mandir=				$(prefix)/man/man1
+incdir=				$(prefix)/include
+
+base_dir=			@base_dir@
+boehm_gc_dir=			@boehm_gc_dir@
+gxx_include_dir=		@gxx_include_dir@
+gxx_sysinc_dir=			@gxx_sysinc_dir@
+
+x_includes=			@x_includes@
+x_libraries=			@x_libraries@
+X_LIBS=				@X_LIBS@
+X_CFLAGS=			@X_CFLAGS@
+
+CC=				@CC@
+CPPFLAGS=			@CPPFLAGS@
+LDFLAGS=			@LDFLAGS@
+LIBS=				@LIBS@
+INSTALL=			@INSTALL@
+
+#
+# My stuff
+#
+
+MKDEPFLAGS=			-I$(gxx_include_dir) -I$(gxx_sysinc_dir)
+
+CPPFLAGS+=			$(X_CFLAGS)
+CPPFLAGS+=			-I$(DEPTH)
+CPPFLAGS+=                      -include $(DEPTH)/config.h
+
+CXXFLAGS+=			-g
+
+EX_LIB_DIRS+=			$(X_LIBS)
+
+SRC=				$(wildcard [A-Z]*.cc)
+OBJ=				$(patsubst %.cc, %.o, $(SRC))
+
+TEST_SRC=			$(wildcard [a-z]*.cc)
+TEST_OBJ=			$(patsubst %.cc, %.o, $(TEST_SRC))
+TEST_OUT=			$(patsubst %.cc, %, $(TEST_SRC))
+
+##################################################
+
+%test:				%test.o lib$(NAME).a lib$(NAME).so
+	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) -L$(libdir) $(EX_LIB_DIRS) -l$(NAME) $(LIBS) $(MYLIBS) -lbase -lX11
+
+##################################################
+
+.PHONY:				all
+all::
+	@$(MAKE) Makefile.out
+	@$(MAKE) -f Makefile.out libs
+
+.PHONY:				libs
+libs:				lib$(NAME).a lib$(NAME).so
+
+
+Makefile.out::
+	rm -f $@
+	cp Makefile $@
+#	makedepend -f- $(CPPFLAGS) $(MKDEPFLAGS) *.cc >> $@
+
+lib$(NAME).a::			$(OBJ)
+	ar -rcv $@ $^
+
+lib$(NAME).so::			$(OBJ)
+#	ld -shared -v -o $@ $^
+
+
+##################################################
+
+.PHONY:				testers
+testers:			install $(TEST_OBJ) $(TEST_OUT)
+testbin:			$(TEST_OBJ)
+
+##################################################
+
+.PHONY:				new
+new::				clean all
+
+##################################################
+
+.PHONY:				manifest
+manifest::
+
+.PHONY:				install
+install::			all
+	-$(INSTALL) -m 0775 -d $(incdir) 2> /dev/null
+	-$(INSTALL) -m 0775 -d $(libdir) 2> /dev/null
+	$(INSTALL) -m 0775 lib$(NAME).a $(libdir)
+	-$(INSTALL) -m 0775 -d $(incdir)/$(NAME) 2> /dev/null
+	$(INSTALL) -m 0664 *.hh $(incdir)/$(NAME)
+
+##################################################
+
+.PHONY:				clean
+clean::
+	rm -f Makefile.out
+	rm -f *~
+	rm -f *.o
+	rm -f *.a
+	rm -f *.so
+	rm -f a.out
+	for FILE in *test ; do if [ -x $$FILE ] ; then rm -f $$FILE ; fi ; done
+
+.PHONY:				distclean
+distclean:			clean
+	/bin/rm -f Makefile
+
+##################################################

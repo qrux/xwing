@@ -1,0 +1,19 @@
+/* config.h.in.  Generated automatically from configure.in by autoheader.  */
+
+/* Define to empty if the keyword does not work.  */
+#undef const
+
+/* Define if the X Window System is missing or not being used.  */
+#undef X_DISPLAY_MISSING
+
+/* Define if libgc is present. */
+#undef HAVE_LIBGC
+
+#ifdef HAVE_LIBGC
+#  define GC_NAME_CONFLICT
+#  define MALLOC	GC_malloc
+#  define NEW		new (UseGC)
+#else
+#  define MALLOC	malloc
+#  define NEW		new
+#endif
