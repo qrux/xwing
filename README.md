@@ -1,6 +1,14 @@
 C++ Native Swing Implementation: Xwing
 =
-This is an attempt to port the Java(TM) Swing(TM?) API to C++. I'm using an X-windows backend on a Linux machine. With sufficient adjustment of Makefile options, the code will compile on any Unix(TM) system with X11R5. Please drop a line on the wiki if you are able to compile the code.
+This is an attempt to port the Java(TM) Swing(TM?) API to C++.
+
+----
+
+*This project was started 12 years ago.  This is mostly just a translation of the old README into markdown format.  This is laughably out-of-date.  But, given how old X is and how stable (read: governed by committee) its low-level interfaces are, I bet most of the code would compile easily with some autoconf/automake updates.*
+
+----
+
+I'm using an X-windows backend on a Linux machine. With sufficient adjustment of Makefile options, the code will compile on any Unix(TM) system with X11R5. Please drop a line on the wiki if you are able to compile the code.
 
 Motivations
 -
