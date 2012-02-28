@@ -1,7 +1,11 @@
 Status
 =
 
-This project was started 12 years old.  This is just a translation of an old HTML file which was like a project blog.  It's probably laughably out of date by now.
+----
+
+*This project was started 12 years old.  This is just a translation of an old HTML file which was like a project blog.  It's probably laughably out of date by now.*
+
+----
 
 18 Jun 2001
 -
