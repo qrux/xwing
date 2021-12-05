@@ -25,7 +25,7 @@ class Object : public gc
 	virtual bool isLessThanOrEqualTo ( Object * );
 	virtual bool isGreaterThanOrEqualTo ( Object * );
 
-	friend std::ostream &operator << ( std::ostream &, Object & );
+	friend ostream &operator << ( ostream &, Object & );
 };
 
 
